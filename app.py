@@ -7,14 +7,53 @@ from flask_jwt import JWT, jwt_required, current_identity
 from flask_cors import CORS
 
 class User(object):
-    def __init__(self, id, username, password):
+    def __init__(self, id, username, password,user_email,phone_number,address):
         self.id = id
         self.username = username
         self.password = password
+        self.user_email = user_email
+        self.phone_number = phone_number
+        self.address = address
 
+
+
+
+def init_user_table():
+    conn = sqlite3.connect('Point_of_Sale.db')
+    print("Opened database successfully")
+
+    conn.execute("CREATE TABLE IF NOT EXISTS user(user_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                 "first_name TEXT NOT NULL,"
+                 "last_name TEXT NOT NULL,"
+                 "username TEXT NOT NULL,"
+                 "password TEXT NOT NULL, address TEXT NOT NULL, phone_number INT NOT NULL, user_email TEXT NOT NULL)")
+    print("user table created successfully")
+    conn.close()
+
+
+def init_post_table():
+    with sqlite3.connect('Point_of_Sale.db') as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS login (id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                     "user_email TEXT NOT NULL,"
+                     "password TEXT NOT NULL,"
+                     "login_date TEXT NOT NULL)")
+    print("Login table created successfully.")
+
+def product_table():
+    with sqlite3.connect('Point_of_Sale.db') as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                     "product_name TEXT NOT NULL,"
+                     "price TEXT NOT NULL,"
+                     "description TEXT NOT NULL, quantity TEXT NOT NULL)")
+    print("Product table created successfully.")
+
+
+product_table()
+init_user_table()
+init_post_table()
 
 def fetch_users():
-    with sqlite3.connect('blog.db') as conn:
+    with sqlite3.connect('Point_of_Sale.db') as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM user")
         users = cursor.fetchall()
@@ -25,33 +64,7 @@ def fetch_users():
             new_data.append(User(data[0], data[3], data[4]))
     return new_data
 
-
 users = fetch_users()
-
-def init_user_table():
-    conn = sqlite3.connect('blog.db')
-    print("Opened database successfully")
-
-    conn.execute("CREATE TABLE IF NOT EXISTS user(user_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                 "first_name TEXT NOT NULL,"
-                 "last_name TEXT NOT NULL,"
-                 "username TEXT NOT NULL,"
-                 "password TEXT NOT NULL)")
-    print("user table created successfully")
-    conn.close()
-
-
-def init_post_table():
-    with sqlite3.connect('blog.db') as conn:
-        conn.execute("CREATE TABLE IF NOT EXISTS post (id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                     "title TEXT NOT NULL,"
-                     "content TEXT NOT NULL,"
-                     "date_created TEXT NOT NULL)")
-    print("blog table created successfully.")
-
-
-init_user_table()
-init_post_table()
 
 username_table = { u.username: u for u in users }
 userid_table = { u.id: u for u in users }
@@ -91,7 +104,7 @@ def user_registration():
         username = request.form['username']
         password = request.form['password']
 
-        with sqlite3.connect("blog.db") as conn:
+        with sqlite3.connect("Point_of_Sale.db") as conn:
             cursor = conn.cursor()
             cursor.execute("INSERT INTO user("
                            "first_name,"
@@ -104,9 +117,9 @@ def user_registration():
         return response
 
 
-@app.route('/create-blog/', methods=["POST"])
+@app.route('/create-Point_of_Sale/', methods=["POST"])
 @jwt_required()
-def create_blog():
+def create_Point_of_Sale():
     response = {}
 
     if request.method == "POST":
@@ -114,7 +127,7 @@ def create_blog():
         content = request.form['content']
         date_created = datetime.datetime.now()
 
-        with sqlite3.connect('blog.db') as conn:
+        with sqlite3.connect('Point_of_Sale.db') as conn:
             cursor = conn.cursor()
             cursor.execute("INSERT INTO post("
                            "title,"
@@ -122,14 +135,14 @@ def create_blog():
                            "date_created) VALUES(?, ?, ?)", (title, content, date_created))
             conn.commit()
             response["status_code"] = 201
-            response['description'] = "Blog post added succesfully"
+            response['description'] = "Point_of_Sale post added succesfully"
         return response
 
 
-@app.route('/get-blogs/', methods=["GET"])
-def get_blogs():
+@app.route('/get-Point_of_Sales/', methods=["GET"])
+def get_Point_of_Sales():
     response = {}
-    with sqlite3.connect("blog.db") as conn:
+    with sqlite3.connect("Point_of_Sale.db") as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM post")
 
@@ -145,12 +158,12 @@ def get_blogs():
 @jwt_required()
 def delete_post(post_id):
     response = {}
-    with sqlite3.connect("blog.db") as conn:
+    with sqlite3.connect("Point_of_Sale.db") as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM post WHERE id=" + str(post_id))
         conn.commit()
         response['status_code'] = 200
-        response['message'] = "blog post deleted successfully."
+        response['message'] = "Point_of_Sale post deleted successfully."
     return response
 
 
@@ -161,13 +174,13 @@ def edit_post(post_id):
     response = {}
 
     if request.method == "PUT":
-        with sqlite3.connect('blog.db') as conn:
+        with sqlite3.connect('Point_of_Sale.db') as conn:
             incoming_data = dict(request.json)
             put_data = {}
 
             if incoming_data.get("title") is not None:
                 put_data["title"] = incoming_data.get("title")
-                with sqlite3.connect('blog.db') as conn:
+                with sqlite3.connect('Point_of_Sale.db') as conn:
                     cursor = conn.cursor()
                     cursor.execute("UPDATE post SET title =? WHERE id=?", (put_data["title"], post_id))
                     conn.commit()
@@ -176,7 +189,7 @@ def edit_post(post_id):
             if incoming_data.get("content") is not None:
                 put_data['content'] = incoming_data.get('content')
 
-                with sqlite3.connect('blog.db') as conn:
+                with sqlite3.connect('Point_of_Sale.db') as conn:
                     cursor = conn.cursor()
                     cursor.execute("UPDATE post SET content =? WHERE id=?", (put_data["content"], post_id))
                     conn.commit()
@@ -190,12 +203,12 @@ def edit_post(post_id):
 def get_post(post_id):
     response = {}
 
-    with sqlite3.connect("blog.db") as conn:
+    with sqlite3.connect("Point_of_Sale.db") as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM post WHERE id=" + str(post_id))
 
         response["status_code"] = 200
-        response["description"] = "Blog post retrieved successfully"
+        response["description"] = "Point_of_Sale post retrieved successfully"
         response["data"] = cursor.fetchone()
 
     return jsonify(response)
